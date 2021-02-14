@@ -1,5 +1,7 @@
 use crate::types::*;
 use crate::{Error, Result};
+use Line::*;
+use Tariff::*;
 
 /// One of two tariffs used by the meter.
 #[derive(Debug)]
@@ -55,15 +57,14 @@ pub enum OBIS<'a> {
     SlaveDeviceType(Slave, UFixedInteger),
     SlaveEquipmentIdentifier(Slave, OctetString<'a>),
     SlaveMeterReading(Slave, TST, UFixedDouble),
+
+    GasMeterReading(TST, UFixedDouble)
 }
 
 impl<'a> OBIS<'a> {
     pub fn parse(line: &'a str) -> Result<OBIS<'a>> {
         let reference_end = line.find('(').ok_or(Error::InvalidFormat)?;
         let (reference, body) = line.split_at(reference_end);
-
-        use Line::*;
-        use Tariff::*;
 
         match reference {
             "1-3:0.2.8" => Ok(OBIS::Version::<'a>(OctetString::parse(body, 2)?)),
@@ -148,6 +149,15 @@ impl<'a> OBIS<'a> {
                 Line3,
                 UFixedDouble::parse(body, 5, 3)?,
             )),
+            "0-1:24.2.1" => {
+                let end = body[1..].find('(').ok_or(Error::InvalidFormat)?;
+                let (time, gas) = body.split_at(end + 1);
+                
+                Ok(OBIS::GasMeterReading(
+                    TST::parse(time)?,
+                    UFixedDouble::parse(gas, 8, 3)?,
+                ))
+            },
             _ => {
                 if reference.len() != 10 || reference.get(..2).ok_or(Error::InvalidFormat)? != "0-"
                 {

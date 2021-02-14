@@ -48,7 +48,7 @@ pub struct State {
     pub slaves: [Slave; 4],
 }
 
-impl<'a> core::convert::From<&crate::Telegram<'a>> for crate::Result<State> {
+impl<'a> From<&crate::Telegram<'a>> for crate::Result<State> {
     fn from(t: &crate::Telegram<'a>) -> Self {
         t.objects().try_fold(State::default(), |mut state, o| {
             match o? {
