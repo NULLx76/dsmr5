@@ -1,17 +1,17 @@
 use crate::Readout;
 
 /// A blocking Iterator that parses a bytestreaming Iterator to Readouts.
-pub struct Reader<T: core::iter::Iterator<Item = u8>> {
+pub struct Reader<T: Iterator<Item = u8>> {
     stream: T,
 }
 
-impl<T: core::iter::Iterator<Item = u8>> Reader<T> {
+impl<T: Iterator<Item = u8>> Reader<T> {
     pub fn new(stream: T) -> Self {
         Reader { stream }
     }
 }
 
-impl<T: core::iter::Iterator<Item = u8>> Iterator for Reader<T> {
+impl<T: Iterator<Item = u8>> Iterator for Reader<T> {
     type Item = Readout;
 
     /// Generates Readout by blocking on the underlying byte iterator until
@@ -59,20 +59,18 @@ impl<T: core::iter::Iterator<Item = u8>> Iterator for Reader<T> {
 
 #[cfg(test)]
 mod tests {
+    use std::io::Read;
+
     #[test]
     fn reader() {
-        use std::io::Read;
-
         let f1 = std::fs::File::open("test/telegram.txt").unwrap().bytes();
         let f2 = std::fs::File::open("test/telegram.txt").unwrap().bytes();
         let f3 = std::fs::File::open("test/telegram.txt").unwrap().bytes();
 
-        let mut bytes = f1.chain(f2).chain(f3).map(|b| b.unwrap());
+        let bytes = f1.chain(f2).chain(f3).map(|b| b.unwrap());
 
         // Spool some bytes such that the stream starts midway.
-        for _ in 0..100 {
-            bytes.next().unwrap();
-        }
+        let bytes = bytes.skip(100);
 
         let mut reader = crate::Reader::new(bytes);
 

@@ -1,5 +1,5 @@
 //! A no-std Rust implementation of the [DSMR5 standard](https://www.netbeheernederland.nl/_upload/Files/Slimme_meter_15_a727fce1f1.pdf) (Dutch Smart Meter Requirements).
-
+#![forbid(unsafe_code)]
 #![no_std]
 
 pub mod state;
@@ -30,7 +30,7 @@ impl Readout {
     ///
     /// Checks the integrity of the telegram by the CRC16 checksum included.
     /// Parses the prefix and identification, and will allow the parsing of the COSEM objects.
-    pub fn to_telegram<'a>(&'a self) -> Result<Telegram<'a>> {
+    pub fn to_telegram(&self) -> Result<Telegram> {
         let buffer = core::str::from_utf8(&self.buffer).map_err(|_| Error::InvalidFormat)?;
 
         if buffer.len() < 16 {
@@ -80,7 +80,7 @@ pub struct Telegram<'a> {
 
 impl<'a> Telegram<'a> {
     /// Parse the COSEM objects, yielding them as part of an iterator.
-    pub fn objects(&self) -> impl core::iter::Iterator<Item = Result<OBIS<'a>>> {
+    pub fn objects(&self) -> impl Iterator<Item = Result<OBIS<'a>>> {
         self.object_buffer.lines().map(OBIS::parse)
     }
 }
