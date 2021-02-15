@@ -27,7 +27,7 @@ impl<'a> OctetString<'a> {
     }
 
     /// Yield this octet string as the underlying octets.
-    pub fn as_octets(&'a self) -> impl core::iter::Iterator<Item = Result<u8>> + 'a {
+    pub fn as_octets(&'a self) -> impl Iterator<Item = Result<u8>> + 'a {
         (0..self.0.len() / 2).map(move |i| {
             u8::from_str_radix(&self.0[i * 2..=i * 2 + 1], 16).map_err(|_| Error::InvalidFormat)
         })
@@ -96,7 +96,7 @@ impl UFixedDouble {
     }
 }
 
-impl core::convert::From<&UFixedDouble> for f64 {
+impl From<&UFixedDouble> for f64 {
     fn from(other: &UFixedDouble) -> Self {
         other.buffer as f64 / (10u64.pow(u32::from(other.point)) as f64)
     }

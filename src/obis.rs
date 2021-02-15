@@ -1,8 +1,10 @@
 use crate::types::*;
 use crate::{Error, Result};
+use Line::*;
+use Tariff::*;
 
 /// One of two tariffs used by the meter.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Tariff {
     Tariff1 = 0,
     Tariff2 = 1,
@@ -55,15 +57,14 @@ pub enum OBIS<'a> {
     SlaveDeviceType(Slave, UFixedInteger),
     SlaveEquipmentIdentifier(Slave, OctetString<'a>),
     SlaveMeterReading(Slave, TST, UFixedDouble),
+
+    GasMeterReading(TST, UFixedDouble)
 }
 
 impl<'a> OBIS<'a> {
     pub fn parse(line: &'a str) -> Result<OBIS<'a>> {
         let reference_end = line.find('(').ok_or(Error::InvalidFormat)?;
         let (reference, body) = line.split_at(reference_end);
-
-        use Line::*;
-        use Tariff::*;
 
         match reference {
             "1-3:0.2.8" => Ok(OBIS::Version::<'a>(OctetString::parse(body, 2)?)),
@@ -129,7 +130,7 @@ impl<'a> OBIS<'a> {
                 UFixedDouble::parse(body, 5, 3)?,
             )),
             "1-0:41.7.0" => Ok(OBIS::InstantaneousActivePowerPlus(
-                Line1,
+                Line2,
                 UFixedDouble::parse(body, 5, 3)?,
             )),
             "1-0:61.7.0" => Ok(OBIS::InstantaneousActivePowerPlus(
@@ -137,7 +138,7 @@ impl<'a> OBIS<'a> {
                 UFixedDouble::parse(body, 5, 3)?,
             )),
             "1-0:22.7.0" => Ok(OBIS::InstantaneousActivePowerNeg(
-                Line2,
+                Line1,
                 UFixedDouble::parse(body, 5, 3)?,
             )),
             "1-0:42.7.0" => Ok(OBIS::InstantaneousActivePowerNeg(
@@ -148,6 +149,15 @@ impl<'a> OBIS<'a> {
                 Line3,
                 UFixedDouble::parse(body, 5, 3)?,
             )),
+            "0-1:24.2.1" => {
+                let end = body[1..].find('(').ok_or(Error::InvalidFormat)?;
+                let (time, gas) = body.split_at(end + 1);
+                
+                Ok(OBIS::GasMeterReading(
+                    TST::parse(time)?,
+                    UFixedDouble::parse(gas, 8, 3)?,
+                ))
+            },
             _ => {
                 if reference.len() != 10 || reference.get(..2).ok_or(Error::InvalidFormat)? != "0-"
                 {
@@ -191,6 +201,23 @@ impl<'a> OBIS<'a> {
                     _ => Err(Error::UnknownObis),
                 }
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_gas_reading() {
+        let line = "0-1:24.2.1(190320181003W)(00304.089*m3)";
+
+        if let OBIS::GasMeterReading(_time, value) = OBIS::parse(line).unwrap() {
+            let f = f64::from(&value);
+            assert_eq!(304.089, f);
+        } else {
+            assert!(false);
         }
     }
 }
