@@ -74,7 +74,7 @@ impl TST {
 }
 
 /// Fixed length unsigned doubles as defined by tag 6.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UFixedDouble {
     buffer: u64,
     point: u8,
@@ -112,5 +112,18 @@ impl UFixedInteger {
         let number = u64::from_str_radix(buffer, 10).map_err(|_| Error::InvalidFormat)?;
 
         Ok(UFixedInteger(number))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::UFixedDouble;
+
+
+    #[test]
+    fn test_parse_double() {
+        let d = UFixedDouble::parse("(236.1*V)", 4, 1).unwrap();
+
+        assert_eq!(236.1, f64::from(&d));
     }
 }

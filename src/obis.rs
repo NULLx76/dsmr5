@@ -4,7 +4,7 @@ use Line::*;
 use Tariff::*;
 
 /// One of two tariffs used by the meter.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Tariff {
     Tariff1 = 0,
     Tariff2 = 1,
